@@ -3,6 +3,15 @@ from ngram_model import NGramModel
 import nltk
 from nltk.corpus import gutenberg
 
+import nltk
+
+@st.cache_resource
+def download_nltk_data():
+    nltk.download('punkt')
+    nltk.download('stopwords')
+
+download_nltk_data()
+
 @st.cache_resource
 def load_model(n_order):
     """Load model for specific n-gram order."""
@@ -22,7 +31,7 @@ st.markdown("Trained on classic literature. Generates coherent text sequences.")
 st.sidebar.header("Settings")
 seed = st.sidebar.text_input("Seed phrase:", "to be or")
 length = st.sidebar.slider("Max words:", 1, 100, 25)  # FIXED: Starts at 1
-ngram_order = st.sidebar.selectbox("N-gram order:", [2, 3, 4], index=1)
+ngram_order = st.sidebar.selectbox("N-gram order:", ["Unigram","Bigram", "Trigram", "4-gram"], index=1)
 
 # Main content area
 col1, col2 = st.columns([2, 3])
@@ -30,7 +39,16 @@ col1, col2 = st.columns([2, 3])
 with col1:
     st.info(f"**N-gram:** {ngram_order}\n**Seed:** {seed or 'random'}\n**Length:** {length}")
     if st.button("🎲 Generate Text", type="primary", use_container_width=True):
+        if ngram_order == "Unigram":
+            ngram_order = 1
+        elif ngram_order == "Bigram":
+            ngram_order = 2
+        elif ngram_order == "Trigram":
+            ngram_order = 3
+        elif ngram_order == "4-gram":
+            ngram_order = 4
         model = load_model(ngram_order + 1)
+        # model = load_model(int(ngram_order) + 1)
         generated = model.generate(seed.lower().split() if seed else None, length)
         st.session_state.generated = generated
 
