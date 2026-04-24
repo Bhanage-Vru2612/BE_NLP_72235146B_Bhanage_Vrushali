@@ -6,14 +6,21 @@ from nltk.corpus import gutenberg
 import streamlit as st
 import nltk
 
-# Download required NLTK data safely
+import streamlit as st
+import nltk
+
 @st.cache_resource
 def download_nltk_data():
-    resources = ['punkt', 'stopwords', 'gutenberg']
+    resources = [
+        'punkt',
+        'punkt_tab',   # ⭐ IMPORTANT (this fixes your error)
+        'stopwords',
+        'gutenberg'
+    ]
     
     for resource in resources:
         try:
-            nltk.data.find(f'corpora/{resource}')
+            nltk.data.find(resource)
         except LookupError:
             nltk.download(resource)
 
