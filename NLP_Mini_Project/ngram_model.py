@@ -1,67 +1,74 @@
+import streamlit as st
+from ngram_model import NGramModel
 import nltk
-import random
-from collections import defaultdict, Counter
-from nltk.util import ngrams
-from nltk.tokenize import word_tokenize, sent_tokenize
-from nltk.corpus import stopwords
+from nltk.corpus import gutenberg
 
-class NGramModel:
-    def __init__(self, n=3):
-        self.n = n
-        self.context_counts = defaultdict(Counter)
-        self.vocab = set()
-        self.stop_words = set(stopwords.words('english'))
+import streamlit as st
+import nltk
 
-    def train(self, text):
-        sentences = text.lower().split('.')
-        tokenized_sents = [word_tokenize(sent) for sent in sentences]
-        filtered_sents = [[w for w in sent if w.isalpha() and len(w) > 2 and w not in self.stop_words] 
-                          for sent in tokenized_sents]
-        
-        for sent in filtered_sents:
-            if len(sent) >= self.n - 1:
-                
-                padded_sent = ['<s>'] * (self.n - 1) + sent + ['</s>']
-                n_grams = ngrams(padded_sent, self.n)
-                for gram in n_grams:
-                    context = ' '.join(gram[:-1])
-                    word = gram[-1]
-                    self.context_counts[context][word] += 1
-                    if word != '<s>' and word != '</s>':
-                        self.vocab.add(word)
-        
-        self.vocab = sorted(list(self.vocab))
+import streamlit as st
+import nltk
 
-    def generate(self, seed_words=None, length=20):
-        if seed_words is None or len(seed_words) == 0:
-            context = ' '.join(['<s>'] * (self.n - 1))
-        else:
-            context = ' '.join(['<s>'] * max(0, self.n - 1 - len(seed_words)) + seed_words)
-        
-        generated = seed_words[:] if seed_words else []
-        
-        for _ in range(length):
-            if context not in self.context_counts:
-                context = ' '.join(['<s>'] * (self.n - 1))
-            
-            next_words = self.context_counts[context]
-            if not next_words:
-                break
-            
-            # Laplace (add-one) smoothing
-            vocab_size = len(self.vocab) + 2  # +2 for <s>, </s>
-            total_count = sum(next_words.values())
-            probs = {w: (next_words[w] + 1) / (total_count + vocab_size) 
-                     for w in next_words}
-            
-            next_word = random.choices(list(probs.keys()), weights=list(probs.values()))[0]
-            generated.append(next_word)
-            
-            context = ' '.join(generated[-(self.n - 1):])
-            if next_word == '</s>':
-                break
-        
-        # Clean output
-        output = ' '.join(generated)
-        output = output.replace(' <s>', '').replace('</s>', '').strip()
-        return ' '.join(output.split()[:length])  # Trim to requested length
+@st.cache_resource
+def download_nltk_data():
+    resources = [
+        'punkt',
+        'punkt_tab',   # ⭐ IMPORTANT (this fixes your error)
+        'stopwords',
+        'gutenberg'
+    ]
+    
+    for resource in resources:
+        try:
+            nltk.data.find(resource)
+        except LookupError:
+            nltk.download(resource)
+
+download_nltk_data()
+
+@st.cache_resource
+def load_model(n_order):
+    """Load model for specific n-gram order."""
+    model = NGramModel(n=n_order)
+    # Use first 3 Gutenberg texts for training
+    fileids = gutenberg.fileids()[:3]
+    texts = [gutenberg.raw(fileid) for fileid in fileids]
+    full_text = ' '.join(texts)
+    model.train(full_text)
+    return model
+
+st.set_page_config(page_title="N-Gram Text Generator", layout="wide")
+st.title("🧠 N-Gram Text Generator")
+st.markdown("Trained on classic literature. Generates coherent text sequences.")
+
+# Sidebar controls
+st.sidebar.header("Settings")
+seed = st.sidebar.text_input("Seed phrase:", "to be or")
+length = st.sidebar.slider("Max words:", 1, 100, 25)  # FIXED: Starts at 1
+ngram_order = st.sidebar.selectbox("N-gram order:", ["Unigram","Bigram", "Trigram", "4-gram"], index=1)
+
+# Main content area
+col1, col2 = st.columns([2, 3])
+
+with col1:
+    st.info(f"**N-gram:** {ngram_order}\n**Seed:** {seed or 'random'}\n**Length:** {length}")
+    if st.button("🎲 Generate Text", type="primary", use_container_width=True):
+        if ngram_order == "Unigram":
+            ngram_order = 1
+        elif ngram_order == "Bigram":
+            ngram_order = 2
+        elif ngram_order == "Trigram":
+            ngram_order = 3
+        elif ngram_order == "4-gram":
+            ngram_order = 4
+        model = load_model(ngram_order)
+        # model = load_model(int(ngram_order) + 1)
+        generated = model.generate(seed.lower().split() if seed else None, length)
+        st.session_state.generated = generated
+
+with col2:
+    if 'generated' in st.session_state:
+        st.success("**Generated:**")
+        st.markdown(f"```{st.session_state.generated}```")
+        if st.button("🔄 New Generation"):
+            del st.session_state.generated
