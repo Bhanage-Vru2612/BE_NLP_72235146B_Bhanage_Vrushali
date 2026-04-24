@@ -13,7 +13,7 @@ class NGramModel:
         self.stop_words = set(stopwords.words('english'))
 
     def train(self, text):
-        sentences = sent_tokenize(text.lower())
+        sentences = text.lower().split('.')
         tokenized_sents = [word_tokenize(sent) for sent in sentences]
         filtered_sents = [[w for w in sent if w.isalpha() and len(w) > 2 and w not in self.stop_words] 
                           for sent in tokenized_sents]
