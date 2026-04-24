@@ -3,12 +3,19 @@ from ngram_model import NGramModel
 import nltk
 from nltk.corpus import gutenberg
 
+import streamlit as st
 import nltk
 
+# Download required NLTK data safely
 @st.cache_resource
 def download_nltk_data():
-    nltk.download('punkt')
-    nltk.download('stopwords')
+    resources = ['punkt', 'stopwords', 'gutenberg']
+    
+    for resource in resources:
+        try:
+            nltk.data.find(f'corpora/{resource}')
+        except LookupError:
+            nltk.download(resource)
 
 download_nltk_data()
 
@@ -47,7 +54,7 @@ with col1:
             ngram_order = 3
         elif ngram_order == "4-gram":
             ngram_order = 4
-        model = load_model(ngram_order + 1)
+        model = load_model(ngram_order)
         # model = load_model(int(ngram_order) + 1)
         generated = model.generate(seed.lower().split() if seed else None, length)
         st.session_state.generated = generated
