@@ -20,7 +20,7 @@ class NGramModel:
         
         for sent in filtered_sents:
             if len(sent) >= self.n - 1:
-                # Pad with start/end tokens
+                
                 padded_sent = ['<s>'] * (self.n - 1) + sent + ['</s>']
                 n_grams = ngrams(padded_sent, self.n)
                 for gram in n_grams:
